@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% block title %}Virtual Sports – betPawa{% endblock %}
+{% block nav_virtuals %}active{% endblock %}
+{% block fp_virtuals %}active{% endblock %}
+{% block content %}
+
+<div class="league-tabs">
+  <a href="/virtuals?league=all" class="league-tab {% if league_filter=='all' %}active{% endif %}">🌐 All</a>
+  {% for k, l in leagues.items() %}
+  <a href="/virtuals?league={{ k }}" class="league-tab {% if league_filter==k %}active{% endif %}">
+    {{ l['flag'] }} {{ l['name'] }}
+  </a>
+  {% endfor %}
+</div>
+
+<div id="matches-container">
+{% for lk, matchday_list in matchdays.items() %}
+  {% for data in matchday_list %}
+    {% set md = data.info %}
+    {% set matches = data.matches %}
+
+    <div class="matchday-banner" id="md-banner-{{ md['id'] }}">
+      <span class="md-num">
+        {{ leagues[lk]['flag'] }}
+        <strong>{{ leagues[lk]['name'] }}</strong>
+        · Matchday <strong>{{ '%02d'|format(md['matchday_number']) }}</strong>
+      </span>
+      {% if md['status'] == 'live' %}
+        <span style="color:#e53935;font-weight:800;font-size:.82rem;animation:pulse 1.5s infinite">● LIVE</span>
+      {% else %}
+        <span style="color:#ff6d00;font-size:.8rem;font-weight:700">
+          Next: <span class="md-timer" data-time="{{ md['starts_at'] }}">—</span>
+        </span>
+      {% endif %}
+    </div>
+
+    {% for m in matches %}
+    {% set odds = m['odds_json']|fromjson %}
+    {% set o    = odds.get('1x2',{}) %}
+    {% if m['status'] != 'finished' %}
+    <div class="match-card {% if m['status']=='live' %}match-live{% endif %}"
+         id="match-card-{{ m['id'] }}"
+         data-match-id="{{ m['id'] }}"
+         data-kickoff="{{ m['kickoff_time'] or '' }}"
+         data-status="{{ m['status'] }}"
+         onclick="goMatch({{ m['id'] }})">
+      <div class="match-header">
+        <div>
+          <span class="match-teams">{{ m['home_code'] }} – {{ m['away_code'] }}</span>
+          <span style="color:#aaa;font-size:.73rem;margin-left:8px">
+            {% if m['kickoff_time'] %}{{ m['kickoff_time'][11:16] }}{% endif %}
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          {% if m['status'] == 'live' %}
+            <span class="badge-live" id="min-{{ m['id'] }}" style="font-size:.72rem">● {{ m['current_minute'] }}'</span>
+            <span id="score-{{ m['id'] }}" style="font-family:'Rajdhani',sans-serif;font-weight:900;font-size:1.1rem;color:#e53935">
+              {{ m['home_score'] }}-{{ m['away_score'] }}
+            </span>
+          {% else %}
+            <span id="match-timer-{{ m['id'] }}"
+                  data-kickoff="{{ m['kickoff_time'] or '' }}"
+                  style="font-size:.72rem;color:#ff6d00;font-weight:700">—</span>
+          {% endif %}
+          <span class="match-arrow">›</span>
+        </div>
+      </div>
+      <div class="odds-row">
+        {% for sel, label in [('1','1'), ('X','X'), ('2','2')] %}
+        <div class="odd-btn"
+             data-match-id="{{ m['id'] }}"
+             data-market="1x2"
+             data-selection="{{ sel }}"
+             onclick="event.stopPropagation();
+                      addToBetslip({{ m['id'] }},
+                        '{{ m['home_code'] }}-{{ m['away_code'] }}',
+                        '1x2','1X2',
+                        '{{ sel }}','{{ label }} {% if sel=='1' %}({{ m['home_code'] }}){% elif sel=='2' %}({{ m['away_code'] }}){% else %}(Draw){% endif %}',
+                        {{ o.get(sel, 0) }})">
+          <span class="odd-label">{{ label }}</span>
+          <span class="odd-value">{{ o.get(sel,'—') }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+</div>
+
+<style>
+.match-live { border-left: 3px solid #e53935; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.countdown-live { color: #e53935 !important; animation: pulse 1.5s infinite; }
+.countdown-upcoming { color: #ff6d00 !important; }
+</style>
+
+<script>
+function goMatch(id) { window.location = '/match/' + id; }
+
+// Get server EAT time from backend
+const serverEATStr = '{{ now_eat.isoformat() if now_eat else "" }}';
+let serverEAT = serverEATStr ? new Date(serverEATStr) : new Date();
+let timeOffset = serverEAT - new Date();
+
+// Maps match_id → kickoff Date (as EAT)
+const matchKickoffs = {};
+
+document.querySelectorAll('[data-kickoff]').forEach(card => {
+  const mid = card.dataset.matchId;
+  const kickoffStr = card.getAttribute('data-kickoff');
+  if (kickoffStr) {
+    // Parse kickoff as EAT time (UTC+3)
+    matchKickoffs[mid] = new Date(kickoffStr.replace(' ', 'T') + '+03:00');
+  }
+});
+
+// Per-match inline timer spans
+const timerSpans = {};
+document.querySelectorAll('[id^="match-timer-"]').forEach(el => {
+  const mid = el.id.replace('match-timer-','');
+  timerSpans[mid] = el;
+});
+
+function formatCountdown(diffSecs) {
+  if (diffSecs <= 0) return null;
+  const h = Math.floor(diffSecs / 3600);
+  const m = Math.floor((diffSecs % 3600) / 60);
+  const s = diffSecs % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s`;
+  return `${s}s`;
+}
+
+// Matchday banners countdown
+document.querySelectorAll('.md-timer[data-time]').forEach(el => {
+  function tick() {
+    const now = new Date();
+    const nowEAT = new Date(now.getTime() + timeOffset);
+    const t = new Date(el.dataset.time.replace(' ', 'T') + '+03:00');
+    const diff = Math.max(0, Math.floor((t - nowEAT) / 1000));
+    const fmt = formatCountdown(diff);
+    el.textContent = fmt || 'Starting…';
+    if (diff > 0) setTimeout(tick, 1000);
+  }
+  tick();
+});
+
+// Unified 1-second ticker: syncs match timers with EAT
+function tickAll() {
+  const now = new Date();
+  const nowEAT = new Date(now.getTime() + timeOffset);
+  
+  Object.entries(timerSpans).forEach(([mid, el]) => {
+    const kickoff = matchKickoffs[mid];
+    if (!kickoff) { 
+      el.textContent = ''; 
+      return; 
+    }
+    
+    const diffMs = kickoff - nowEAT;
+    const diffSecs = Math.floor(diffMs / 1000);
+    
+    if (diffSecs > 0) {
+      // Countdown - match not started yet
+      const fmt = formatCountdown(diffSecs);
+      el.textContent = fmt;
+      el.className = 'countdown-upcoming';
+      el.style.color = '#ff6d00';
+    } else if (diffSecs <= 0 && diffSecs > -10) {
+      // Just hit zero - match should start
+      el.textContent = '● STARTING';
+      el.className = 'countdown-live';
+      el.style.color = '#e53935';
+      // Force reload to catch live match
+      setTimeout(() => location.reload(), 2000);
+    } else if (diffSecs <= -10) {
+      // Match should be live
+      el.textContent = '● LIVE';
+      el.className = 'countdown-live';
+      el.style.color = '#e53935';
+      // Reload after a few seconds if still not showing live
+      if (diffSecs > -30) {
+        setTimeout(() => location.reload(), 5000);
+      }
+    }
+  });
+}
+
+setInterval(tickAll, 1000);
+tickAll();
+
+// ── Live score polling + auto-remove finished cards ───────────────────────
+const liveCards = {};
+document.querySelectorAll('.match-live[data-match-id]').forEach(card => {
+  liveCards[card.dataset.matchId] = true;
+});
+
+// Poll all visible matches
+async function pollMatches() {
+  const cards = document.querySelectorAll('.match-card[data-match-id]');
+  for (const card of cards) {
+    const mid = card.dataset.matchId;
+    try {
+      const res = await fetch(`/match/${mid}/poll`);
+      if (!res.ok) continue;
+      const d = await res.json();
+
+      if (d.status === 'deleted' || d.status === 'finished') {
+        // Animate removal after 10-minute server delay
+        card.style.transition = 'opacity .6s, max-height .6s';
+        card.style.opacity = '0';
+        card.style.maxHeight = '0';
+        card.style.overflow = 'hidden';
+        setTimeout(() => { card.remove(); checkBannersEmpty(); }, 700);
+        continue;
+      }
+
+      if (d.status === 'live') {
+        card.classList.add('match-live');
+        const minEl = document.getElementById(`min-${mid}`);
+        const scoreEl = document.getElementById(`score-${mid}`);
+        const timerEl = document.getElementById(`match-timer-${mid}`);
+        if (minEl) minEl.textContent = `● ${d.current_minute}'`;
+        if (scoreEl) scoreEl.textContent = `${d.home_score}-${d.away_score}`;
+        if (timerEl) {
+          timerEl.textContent = `● ${d.current_minute}'`;
+          timerEl.style.color = '#e53935';
+        }
+      }
+    } catch(e) {}
+  }
+}
+
+function checkBannersEmpty() {
+  document.querySelectorAll('.matchday-banner').forEach(banner => {
+    let hasCards = false;
+    let el = banner.nextElementSibling;
+    while (el && !el.classList.contains('matchday-banner')) {
+      if (el.classList.contains('match-card')) { hasCards = true; break; }
+      el = el.nextElementSibling;
+    }
+    if (!hasCards) {
+      banner.style.transition = 'opacity .5s';
+      banner.style.opacity = '0';
+      setTimeout(() => banner.remove(), 600);
+    }
+  });
+}
+
+// Poll every 10 seconds
+setInterval(pollMatches, 10000);
+
+// Force reload every 30 seconds to catch new live matches
+setInterval(() => {
+  // Check if any match should be live but isn't showing
+  const timers = document.querySelectorAll('[id^="match-timer-"]');
+  let needsReload = false;
+  timers.forEach(timer => {
+    if (timer.textContent === '● STARTING' || timer.textContent === '● LIVE') {
+      needsReload = true;
+    }
+  });
+  if (needsReload) {
+    location.reload();
+  }
+}, 30000);
+</script>
+{% endblock %}

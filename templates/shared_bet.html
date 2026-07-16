@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Shared Bet – betPawa{% endblock %}
+{% block content %}
+
+<div style="background:var(--bp-dark);padding:12px 16px;display:flex;align-items:center;gap:10px">
+  <a href="/virtuals" style="color:white;text-decoration:none;font-size:1.1rem">‹</a>
+  <span style="color:white;font-weight:800">Shared Bet</span>
+</div>
+
+<div style="background:linear-gradient(135deg,#111 0%,#1a1a1a 100%);padding:20px 16px;text-align:center">
+  <div style="color:#888;font-size:.78rem;margin-bottom:4px">SHARE CODE</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:2rem;font-weight:900;color:var(--bp-green);letter-spacing:.1em">{{ bet['share_code'] }}</div>
+  <div style="color:#aaa;font-size:.78rem;margin-top:4px">By <strong style="color:white">{{ bet['username'] }}</strong> · {{ bet['placed_at'][:16] }}</div>
+</div>
+
+<div style="background:white;margin:8px 0">
+  {% for sel in selections %}
+  <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:800;font-size:.9rem">{{ sel['home_code'] or '?' }} – {{ sel['away_code'] or '?' }}</div>
+        <div style="font-size:.78rem;color:#888;margin-top:2px">
+          {{ sel['market'] }} · <strong>{{ sel['selection'] }}</strong>
+        </div>
+        {% if sel['match_status'] == 'finished' %}
+        <div style="font-size:.75rem;color:#aaa">FT: {{ sel['home_score'] }}-{{ sel['away_score'] }}</div>
+        {% elif sel['match_status'] == 'live' %}
+        <div style="font-size:.75rem;color:#e53935;font-weight:700">● LIVE {{ sel['home_score'] }}-{{ sel['away_score'] }}</div>
+        {% endif %}
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:900;color:var(--bp-green)">{{ sel['odds'] }}</div>
+        <div style="font-size:.7rem;
+          color:{% if sel['result']=='won' %}#2d6a00{% elif sel['result']=='lost' %}#e53935{% else %}#888{% endif %};
+          font-weight:700;text-transform:uppercase">
+          {% if sel['result']=='won' %}✅ Won{% elif sel['result']=='lost' %}❌ Lost{% else %}⏳ Pending{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div style="background:white;padding:16px;margin:0 0 8px">
+  <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+    <span style="color:#888">Total Odds</span>
+    <strong style="font-family:'Rajdhani',sans-serif;font-size:1.1rem">
+      {% set total = namespace(v=1) %}
+      {% for s in selections %}{% set total.v = total.v * s['odds'] %}{% endfor %}
+      {{ "%.2f"|format(total.v) }}x
+    </strong>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+    <span style="color:#888">Stake</span>
+    <strong>{{ bet['total_stake']|money }} TZS</strong>
+  </div>
+  <div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0f0;padding-top:10px">
+    <span style="font-weight:800">Potential Win</span>
+    <strong style="color:var(--bp-green);font-family:'Rajdhani',sans-serif;font-size:1.2rem">{{ bet['potential_win']|money }} TZS</strong>
+  </div>
+  <div style="margin-top:10px;text-align:center">
+    <span style="padding:6px 16px;border-radius:20px;font-weight:800;font-size:.85rem;
+      background:{% if bet['status']=='won' %}#e8f5e9{% elif bet['status']=='lost' %}#ffebee{% else %}#fff3e0{% endif %};
+      color:{% if bet['status']=='won' %}#2d6a00{% elif bet['status']=='lost' %}#c62828{% else %}#e65100{% endif %}">
+      {{ bet['status']|upper }}
+    </span>
+  </div>
+</div>
+
+<div style="padding:16px;text-align:center">
+  <a href="/virtuals" style="display:inline-block;background:var(--bp-green);color:#111;padding:12px 32px;border-radius:8px;font-weight:800;text-decoration:none">
+    ⚽ Place Your Own Bet
+  </a>
+</div>
+{% endblock %}

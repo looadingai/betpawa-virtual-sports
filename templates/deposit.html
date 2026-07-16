@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Deposit – betPawa{% endblock %}
+{% block fp_account %}active{% endblock %}
+{% block content %}
+<div style="background:var(--bp-dark);padding:12px 16px;display:flex;align-items:center;gap:10px">
+  <a href="/account" style="color:white;text-decoration:none;font-size:1.1rem">‹</a>
+  <span style="color:white;font-weight:800">Deposit Funds</span>
+</div>
+
+<div style="background:rgba(168,255,0,.12);border-bottom:2px solid var(--bp-green);padding:12px 16px;font-size:.85rem;color:#2d6a00;font-weight:600">
+  💰 Current Balance: <strong>{{ user['balance']|money }} TZS</strong>
+</div>
+
+<div class="form-card">
+  <!-- ========== INSTANT STK PUSH SECTION (NEW) ========== -->
+  <div style="background:linear-gradient(135deg, #25A35B 0%, #1a7a44 100%); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">
+    <div style="color: white; font-size: 1.1rem; font-weight: 800; margin-bottom: 4px;">⚡ Instant Deposit</div>
+    <div style="color: rgba(255,255,255,0.8); font-size: .78rem; margin-bottom: 16px;">Receive STK Push on your phone · Instant balance update</div>
+    
+    <div id="instantDepositArea">
+      <button type="button" id="showInstantBtn" style="background: white; color: #25A35B; border: none; padding: 12px 24px; border-radius: 50px; font-weight: 800; font-size: .9rem; cursor: pointer; width: 100%;">
+        📱 Pay with M-Pesa (Instant)
+      </button>
+    </div>
+    
+    <div id="instantFormArea" style="display: none;">
+      <div style="background: white; border-radius: 12px; padding: 16px; text-align: left;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" style="color: #333;">M-Pesa Phone Number</label>
+          <input type="tel" id="instantPhone" class="form-control" value="{{ user['phone'] or '' }}" placeholder="2547XXXXXXXX" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
+          <small style="font-size: .7rem; color: #888;">Format: 2547XXXXXXXX (no leading 0)</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="color: #333;">Amount (TZS)</label>
+          <input type="number" id="instantAmount" class="form-control" min="10" placeholder="Minimum 10 TZS" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="cancelInstantBtn" style="flex: 1; background: #f0f0f0; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">Cancel</button>
+          <button type="button" id="confirmInstantBtn" style="flex: 2; background: #25A35B; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer;">Continue to Payment →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DIVIDER ========== -->
+  <div style="margin: 16px 0; text-align: center; position: relative;">
+    <hr style="border: none; border-top: 1px solid #e0e0e0;">
+    <span style="background: white; padding: 0 10px; color: #888; font-size: .75rem;">OR Request Manual Deposit</span>
+  </div>
+
+  <!-- ========== EXISTING MANUAL DEPOSIT FORM ========== -->
+  <form method="POST">
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select name="method" class="form-control" style="font-family:'Nunito',sans-serif">
+        <option value="mpesa">📱 M-Pesa</option>
+        <option value="tigopesa">📱 Tigo Pesa</option>
+        <option value="airtel">📱 Airtel Money</option>
+        <option value="halopesa">📱 Halo Pesa</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone Number</label>
+      <input type="tel" name="phone" class="form-control" value="{{ user['phone'] or '' }}" placeholder="e.g. 0712345678">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (TZS)</label>
+      <input type="number" name="amount" class="form-control" min="500" placeholder="Minimum 500 TZS" required>
+    </div>
+    <!-- Quick amounts -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      {% for amt in [1000,2000,5000,10000,20000,50000] %}
+      <button type="button" onclick="document.querySelector('[name=amount]').value={{ amt }}"
+              style="background:#f5f5f5;border:1px solid #e0e0e0;padding:6px 14px;border-radius:20px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:'Nunito',sans-serif">
+        {{ '{:,}'.format(amt) }}
+      </button>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-primary">REQUEST DEPOSIT (Admin Approval)</button>
+    <p style="text-align:center;margin-top:12px;font-size:.78rem;color:#888">Manual deposits require admin approval and may take a few minutes</p>
+  </form>
+</div>
+
+<script>
+// ========== INSTANT STK PUSH DEPOSIT ==========
+const showInstantBtn = document.getElementById('showInstantBtn');
+const instantFormArea = document.getElementById('instantFormArea');
+const instantDepositArea = document.getElementById('instantDepositArea');
+const cancelInstantBtn = document.getElementById('cancelInstantBtn');
+const confirmInstantBtn = document.getElementById('confirmInstantBtn');
+const instantPhone = document.getElementById('instantPhone');
+const instantAmount = document.getElementById('instantAmount');
+
+// Show the instant deposit form
+if (showInstantBtn) {
+  showInstantBtn.onclick = () => {
+    instantDepositArea.style.display = 'none';
+    instantFormArea.style.display = 'block';
+  };
+}
+
+// Cancel instant deposit
+if (cancelInstantBtn) {
+  cancelInstantBtn.onclick = () => {
+    instantFormArea.style.display = 'none';
+    instantDepositArea.style.display = 'block';
+    // Clear fields
+    if (instantAmount) instantAmount.value = '';
+  };
+}
+
+// Process instant deposit with STK Push
+if (confirmInstantBtn) {
+  confirmInstantBtn.onclick = async () => {
+    const amount = parseFloat(instantAmount?.value);
+    const phone = instantPhone?.value?.trim();
+    
+    // Validation
+    if (!amount || amount < 10) {
+      alert('❌ Please enter amount (minimum KES 10)');
+      instantAmount?.focus();
+      return;
+    }
+    
+    if (amount > 500000) {
+      alert('❌ Maximum deposit is KES 500,000');
+      return;
+    }
+    
+    if (!phone) {
+      alert('❌ Please enter your M-Pesa phone number');
+      instantPhone?.focus();
+      return;
+    }
+    
+    // Validate phone format
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone.match(/^(254|07)[0-9]{8,9}$/)) {
+      alert('❌ Invalid phone number. Use format: 2547XXXXXXXX or 07XXXXXXXX');
+      return;
+    }
+    
+    // Disable button during processing
+    confirmInstantBtn.disabled = true;
+    confirmInstantBtn.textContent = '⏳ Processing...';
+    
+    try {
+      const response = await fetch('/api/deposit/stk', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          amount: amount, 
+          phone: cleanPhone,
+          email: '{{ user.email if user.email else "" }}'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.redirect_url) {
+        // Redirect to PesaPal payment page
+        window.location.href = data.redirect_url;
+      } else {
+        alert('❌ Error: ' + (data.error || 'Payment initiation failed. Please try again.'));
+        confirmInstantBtn.disabled = false;
+        confirmInstantBtn.textContent = 'Continue to Payment →';
+      }
+    } catch (err) {
+      console.error('STK Error:', err);
+      alert('❌ Network error. Please check your connection and try again.');
+      confirmInstantBtn.disabled = false;
+      confirmInstantBtn.textContent = 'Continue to Payment →';
+    }
+  };
+}
+
+// Helper function to format phone number as user types
+if (instantPhone) {
+  instantPhone.addEventListener('input', function(e) {
+    let val = this.value.replace(/[^0-9]/g, '');
+    if (val.startsWith('0') && val.length > 1) {
+      val = '254' + val.substring(1);
+    }
+    // Don't auto-format aggressively, just clean
+    this.value = val;
+  });
+}
+</script>
+{% endblock %}

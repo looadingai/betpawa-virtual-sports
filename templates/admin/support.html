@@ -1,0 +1,136 @@
+{% extends 'admin/base_admin.html' %}
+{% block title %}Customer Support – Admin{% endblock %}
+{% block content %}
+<h2 style="font-family:'Rajdhani';font-size:1.6rem;font-weight:700;margin-bottom:16px">💬 Customer Support</h2>
+
+<div style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 180px)">
+  <!-- User list -->
+  <div class="adm-card" style="overflow-y:auto;padding:0">
+    <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0;font-weight:800;font-size:.88rem;color:#888">CONVERSATIONS</div>
+    {% if users_with_chats %}
+      {% for u in users_with_chats %}
+      <a href="/admin/support?user_id={{ u['id'] }}"
+         style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #f0f0f0;text-decoration:none;color:#222;
+                background:{% if selected_uid == u['id'] %}#f0fff0{% else %}white{% endif %}">
+        <div style="width:36px;height:36px;background:var(--bp-green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0">
+          {{ u['username'][0]|upper }}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u['username'] }}</div>
+          <div style="font-size:.73rem;color:#888">{{ u['phone'] }}</div>
+        </div>
+        {% if u['unread'] > 0 %}
+        <span style="background:#e53935;color:white;border-radius:50%;min-width:20px;height:20px;font-size:.7rem;display:flex;align-items:center;justify-content:center;font-weight:800;padding:0 4px">{{ u['unread'] }}</span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    {% else %}
+    <div style="padding:24px;text-align:center;color:#aaa;font-size:.85rem">No conversations yet</div>
+    {% endif %}
+  </div>
+
+  <!-- Chat area -->
+  <div class="adm-card" style="display:flex;flex-direction:column;padding:0">
+    {% if selected_user %}
+    <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;background:var(--bp-green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800">
+          {{ selected_user['username'][0]|upper }}
+        </div>
+        <div>
+          <div style="font-weight:800">{{ selected_user['username'] }}</div>
+          <div style="font-size:.75rem;color:#888">{{ selected_user['phone'] }} · Balance: {{ selected_user['balance']|round(2) }} TZS</div>
+        </div>
+      </div>
+      
+      <!-- Withdrawal Fee Payment Button -->
+      {% if selected_user['withdrawal_fee'] > 0 %}
+      <div>
+        <form method="POST" action="/admin/user/{{ selected_user['id'] }}/mark_fee_paid" onsubmit="return confirm('Confirm that {{ selected_user['username'] }} has paid the withdrawal fee of {{ selected_user['withdrawal_fee']|money }} TZS?')">
+          <button type="submit" style="background:#ff6d00;color:white;border:none;padding:8px 16px;border-radius:6px;font-weight:800;cursor:pointer;font-size:.82rem">
+            💰 Mark Fee as Paid
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Fee warning banner if user has pending withdrawal with fee -->
+    {% if selected_user['withdrawal_fee'] > 0 %}
+    <div style="background:#fff3cd;border-left:4px solid #ff6d00;padding:10px 16px;margin:8px 12px;border-radius:6px">
+      <div style="font-weight:800;margin-bottom:4px">⚠️ Withdrawal Fee Required</div>
+      <div style="font-size:.8rem;color:#664d00">
+        This user has a withdrawal fee of <strong>{{ selected_user['withdrawal_fee']|money }} TZS</strong>. 
+        Please confirm payment before approving their withdrawal.
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="admin-chat-box" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f9f9f9">
+      {% for msg in messages %}
+      <div style="display:flex;flex-direction:column;align-items:{% if msg['sender']=='admin' %}flex-end{% else %}flex-start{% endif %}">
+        <div style="max-width:70%;padding:10px 14px;border-radius:{% if msg['sender']=='admin' %}16px 16px 4px 16px{% else %}16px 16px 16px 4px{% endif %};
+          background:{% if msg['sender']=='admin' %}var(--bp-green){% else %}white{% endif %};
+          color:{% if msg['sender']=='admin' %}#111{% else %}#222{% endif %};
+          font-size:.88rem;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+          {% if msg['sender']=='user' %}<div style="font-size:.68rem;font-weight:800;color:#888;margin-bottom:4px">👤 {{ selected_user['username'] }}</div>{% endif %}
+          {{ msg['message'] }}
+        </div>
+        <div style="font-size:.65rem;color:#aaa;margin-top:3px">{{ msg['created_at'][11:16] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="padding:12px 16px;border-top:1px solid #f0f0f0;background:white">
+      <form method="POST" action="/admin/support/send" style="display:flex;gap:10px;align-items:center">
+        <input type="hidden" name="user_id" value="{{ selected_user['id'] }}">
+        <input type="text" name="message" id="admin-msg-input" class="modal-input"
+               placeholder="Type reply…" autocomplete="off" required
+               style="flex:1;border-radius:24px;padding:10px 16px;margin:0">
+        <button type="submit" style="background:var(--bp-green);border:none;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="#111" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </form>
+    </div>
+    {% else %}
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#aaa;flex-direction:column;gap:10px">
+      <div style="font-size:3rem">💬</div>
+      <div style="font-weight:700">Select a conversation</div>
+      <div style="font-size:.85rem">Choose a user from the left to start chatting</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+{% if selected_user %}
+const chatBox = document.getElementById('admin-chat-box');
+chatBox.scrollTop = chatBox.scrollHeight;
+
+let lastId = {{ messages[-1]['id'] if messages else 0 }};
+setInterval(async () => {
+  const res = await fetch(`/admin/support/poll?user_id={{ selected_user['id'] }}&last_id=${lastId}`);
+  const data = await res.json();
+  if (data.messages && data.messages.length > 0) {
+    data.messages.forEach(msg => {
+      lastId = Math.max(lastId, msg.id);
+      const isAdmin = msg.sender === 'admin';
+      const div = document.createElement('div');
+      div.style.cssText = `display:flex;flex-direction:column;align-items:${isAdmin?'flex-end':'flex-start'}`;
+      div.innerHTML = `
+        <div style="max-width:70%;padding:10px 14px;border-radius:${isAdmin?'16px 16px 4px 16px':'16px 16px 16px 4px'};
+          background:${isAdmin?'var(--bp-green)':'white'};color:${isAdmin?'#111':'#222'};
+          font-size:.88rem;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+          ${!isAdmin?'<div style="font-size:.68rem;font-weight:800;color:#888;margin-bottom:4px">👤 User</div>':''}
+          ${msg.message}
+        </div>
+        <div style="font-size:.65rem;color:#aaa;margin-top:3px">${msg.created_at.substring(11,16)}</div>
+      `;
+      chatBox.appendChild(div);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+}, 5000);
+{% endif %}
+</script>
+{% endblock %}
