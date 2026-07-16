@@ -12,35 +12,7 @@
 </div>
 
 <div class="form-card">
-  <!-- ========== INSTANT STK PUSH SECTION (NEW) ========== -->
-  <div style="background:linear-gradient(135deg, #25A35B 0%, #1a7a44 100%); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">
-    <div style="color: white; font-size: 1.1rem; font-weight: 800; margin-bottom: 4px;">⚡ Instant Deposit</div>
-    <div style="color: rgba(255,255,255,0.8); font-size: .78rem; margin-bottom: 16px;">Receive STK Push on your phone · Instant balance update</div>
-    
-    <div id="instantDepositArea">
-      <button type="button" id="showInstantBtn" style="background: white; color: #25A35B; border: none; padding: 12px 24px; border-radius: 50px; font-weight: 800; font-size: .9rem; cursor: pointer; width: 100%;">
-        📱 Pay with M-Pesa (Instant)
-      </button>
-    </div>
-    
-    <div id="instantFormArea" style="display: none;">
-      <div style="background: white; border-radius: 12px; padding: 16px; text-align: left;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label class="form-label" style="color: #333;">M-Pesa Phone Number</label>
-          <input type="tel" id="instantPhone" class="form-control" value="{{ user['phone'] or '' }}" placeholder="2547XXXXXXXX" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-          <small style="font-size: .7rem; color: #888;">Format: 2547XXXXXXXX (no leading 0)</small>
-        </div>
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label class="form-label" style="color: #333;">Amount (TZS)</label>
-          <input type="number" id="instantAmount" class="form-control" min="10" placeholder="Minimum 10 TZS" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" id="cancelInstantBtn" style="flex: 1; background: #f0f0f0; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">Cancel</button>
-          <button type="button" id="confirmInstantBtn" style="flex: 2; background: #25A35B; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer;">Continue to Payment →</button>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- ========== DIVIDER ========== -->
   <div style="margin: 16px 0; text-align: center; position: relative;">
