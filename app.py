@@ -903,6 +903,153 @@ def health_check():
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
+
+
+
+
+@app.route('/bet/share/<code>/data')
+def get_shared_bet_data(code):
+    """API endpoint to get shared bet data for AJAX loading"""
+    bet = query("SELECT b.*, u.username FROM bets b JOIN users u ON b.user_id=u.id WHERE b.share_code=?", (code,), one=True)
+    if not bet:
+        return jsonify({'error': 'Bet not found'}), 404
+    
+    selections = query("""SELECT bs.*, m.home_team, m.away_team, m.home_code, m.away_code,
+                           m.status as match_status, m.home_score, m.away_score
+                    FROM bet_selections bs
+                    LEFT JOIN matches m ON bs.match_id = m.id
+                    WHERE bs.bet_id=?""", (bet['id'],))
+    
+    return jsonify({
+        'bet': dict(bet),
+        'selections': [dict(s) for s in selections]
+    })
+
+@app.route('/bet/load/<code>', methods=['GET'])
+def load_shared_bet(code):
+    """Load shared bet selections into the current user's betslip"""
+    bet = query("SELECT b.*, u.username FROM bets b JOIN users u ON b.user_id=u.id WHERE b.share_code=?", (code,), one=True)
+    if not bet:
+        flash('Bet not found.', 'danger')
+        return redirect(url_for('virtuals'))
+    
+    # Get selections from the shared bet
+    selections = query("""SELECT bs.*, m.home_team, m.away_team, m.home_code, m.away_code,
+                           m.status as match_status, m.home_score, m.away_score
+                    FROM bet_selections bs
+                    LEFT JOIN matches m ON bs.match_id = m.id
+                    WHERE bs.bet_id=?""", (bet['id'],))
+    
+    # Clear existing betslip
+    session['betslip'] = []
+    
+    # Add selections to betslip
+    loaded_count = 0
+    for sel in selections:
+        # Check if match is still valid (not finished)
+        if sel['match_status'] == 'finished':
+            flash(f"⚠️ Match {sel['home_code']} vs {sel['away_code']} is already finished and won't be added.", 'warning')
+            continue
+            
+        # Add to betslip
+        session['betslip'].append({
+            'match_id': sel['match_id'],
+            'match_label': f"{sel['home_code']} - {sel['away_code']}",
+            'market': sel['market'],
+            'market_label': sel['market'],
+            'selection': sel['selection'],
+            'selection_label': sel['selection'],
+            'odds': float(sel['odds'])
+        })
+        loaded_count += 1
+    
+    session.modified = True
+    
+    # Redirect based on user login status
+    if g.user:
+        flash(f'✅ Loaded {loaded_count} selections from shared bet! Your betslip is ready.', 'success')
+        return redirect(url_for('virtuals'))
+    else:
+        flash(f'✅ Loaded {loaded_count} selections! Please login to place the bet.', 'info')
+        return redirect(url_for('login'))
+
+@app.route('/bet/load-and-place/<code>', methods=['POST'])
+@login_required
+def load_and_place_bet(code):
+    """Load shared bet and immediately place it with stake from form"""
+    # Load the selections using existing logic
+    bet = query("SELECT * FROM bets WHERE share_code=?", (code,), one=True)
+    if not bet:
+        return jsonify({'error': 'Bet not found'}), 404
+    
+    selections = query("""SELECT bs.*, m.home_team, m.away_team, m.home_code, m.away_code,
+                           m.status as match_status
+                    FROM bet_selections bs
+                    LEFT JOIN matches m ON bs.match_id = m.id
+                    WHERE bs.bet_id=?""", (bet['id'],))
+    
+    # Clear and load betslip
+    session['betslip'] = []
+    valid_count = 0
+    for sel in selections:
+        if sel['match_status'] != 'finished':
+            session['betslip'].append({
+                'match_id': sel['match_id'],
+                'match_label': f"{sel['home_code']} - {sel['away_code']}",
+                'market': sel['market'],
+                'market_label': sel['market'],
+                'selection': sel['selection'],
+                'selection_label': sel['selection'],
+                'odds': float(sel['odds'])
+            })
+            valid_count += 1
+    
+    session.modified = True
+    
+    if valid_count == 0:
+        return jsonify({'error': 'No valid selections available (matches may be finished)'}), 400
+    
+    # Get stake from form or use default (minimum)
+    try:
+        stake = float(request.form.get('stake', 100))
+    except ValueError:
+        stake = 100
+    
+    stake = max(100, min(stake, 1000000))  # Clamp between min and max
+    
+    # Calculate odds
+    from functools import reduce
+    total_odds = round(reduce(lambda a, b: a * b, [float(s['odds']) for s in session['betslip']], 1.0), 2)
+    potential = round(stake * total_odds, 2)
+    share_code = generate_share_code()
+    
+    # Place the bet
+    user = g.user
+    if user['balance'] < stake:
+        return jsonify({'error': f'Insufficient balance. You have {fmt(user["balance"])} TZS'}), 400
+    
+    execute("UPDATE users SET balance=balance-? WHERE id=?", (stake, user['id']))
+    bid = execute("INSERT INTO bets (user_id,total_stake,potential_win,share_code) VALUES (?,?,?,?)",
+                  (user['id'], stake, potential, share_code))
+    
+    for sel in session['betslip']:
+        execute("INSERT INTO bet_selections (bet_id,match_id,market,selection,odds) VALUES (?,?,?,?,?)",
+                (bid, sel['match_id'], sel['market'], sel['selection'], sel['odds']))
+    
+    execute("INSERT INTO transactions (user_id,type,amount,status,note) VALUES (?,?,?,?,?)",
+            (user['id'], 'bet', -stake, 'confirmed', f'Bet #{bid} (loaded from shared bet)'))
+    
+    session['betslip'] = []
+    session['balance'] = fmt(user['balance'] - stake)
+    
+    return jsonify({
+        'success': True,
+        'bet_id': bid,
+        'share_code': share_code,
+        'stake': stake,
+        'potential_win': potential,
+        'message': f'Bet placed successfully! Stake: {fmt(stake)} TZS, Potential Win: {fmt(potential)} TZS'
+    })
 # ============== MAIN ==============
 if __name__ == '__main__':
     with app.app_context():
