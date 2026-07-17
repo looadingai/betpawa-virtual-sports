@@ -13,6 +13,61 @@
   {% endfor %}
 </div>
 
+<!-- BETSLIP PREVIEW - Shows current selections -->
+{% if session.get('betslip', [])|length > 0 %}
+<div id="betslip-preview" style="background:linear-gradient(135deg,#f8f9fa,#fff);padding:14px 16px;border-radius:10px;margin:8px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:2px solid var(--bp-green)">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div>
+      <span style="font-size:1.1rem;font-weight:900;color:#111">📋 BETSLIP</span>
+      <span style="background:var(--bp-green);color:#111;padding:2px 12px;border-radius:12px;font-weight:900;font-size:.85rem;margin-left:8px">
+        {{ session.get('betslip', [])|length }}
+      </span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="/my-bets" style="color:var(--bp-green);text-decoration:none;font-weight:700;padding:6px 14px;border:1px solid var(--bp-green);border-radius:6px;font-size:.85rem;background:rgba(168,255,0,0.1)">📊 My Bets</a>
+      <form action="/betslip/clear" method="POST" style="display:inline" onsubmit="return confirm('Clear all selections?')">
+        <button type="submit" style="background:none;border:1px solid #e53935;color:#e53935;font-weight:700;cursor:pointer;padding:6px 14px;border-radius:6px;font-size:.85rem">✕ Clear</button>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Selection Preview -->
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+    {% for sel in session.get('betslip', [])[:4] %}
+    <span style="background:#f0f0f0;padding:4px 12px;border-radius:16px;font-size:.75rem;color:#555;border:1px solid #e0e0e0">
+      {{ sel['match_label'] }}: <strong>{{ sel['selection_label'] }}</strong> @ {{ sel['odds'] }}
+    </span>
+    {% endfor %}
+    {% if session.get('betslip', [])|length > 4 %}
+    <span style="background:#f0f0f0;padding:4px 12px;border-radius:16px;font-size:.75rem;color:#888;border:1px solid #e0e0e0">
+      +{{ session.get('betslip', [])|length - 4 }} more
+    </span>
+    {% endif %}
+  </div>
+  
+  <!-- Quick Place from Betslip -->
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee">
+    <form action="/betslip/place" method="POST" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="flex:1;min-width:120px">
+        <label style="font-size:.75rem;color:#888;display:block;margin-bottom:2px">Stake (TZS)</label>
+        <input type="number" name="stake" value="100" min="100" max="1000000" step="100"
+               style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:.95rem;background:white">
+      </div>
+      <div style="flex:1;min-width:100px">
+        <label style="font-size:.75rem;color:#888;display:block;margin-bottom:2px">Potential Win</label>
+        <div id="betslip-potential" style="font-weight:900;color:var(--bp-green);font-size:1rem;padding:6px 0">0 TZS</div>
+      </div>
+      <div style="flex:1;min-width:100px">
+        <button type="submit" 
+                style="width:100%;background:linear-gradient(135deg,#a8ff00,#7cb800);color:#111;padding:10px;border:none;border-radius:6px;font-weight:800;font-size:.95rem;cursor:pointer;margin-top:14px">
+          🚀 Place Bet
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <div id="matches-container">
 {% for lk, matchday_list in matchdays.items() %}
   {% for data in matchday_list %}
@@ -89,182 +144,273 @@
 {% endfor %}
 </div>
 
+<!-- Footer Tip -->
+<div style="padding:16px;text-align:center;font-size:.8rem;color:#888;border-top:1px solid #eee;margin-top:8px">
+  💡 <strong>Tip:</strong> Share your betslip with friends using the share button in 
+  <a href="/my-bets" style="color:var(--bp-green);font-weight:700;text-decoration:none">My Bets</a>!
+</div>
+
 <style>
 .match-live { border-left: 3px solid #e53935; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 .countdown-live { color: #e53935 !important; animation: pulse 1.5s infinite; }
 .countdown-upcoming { color: #ff6d00 !important; }
+
+/* Betslip preview animation */
+@keyframes highlightBetslip {
+    0% { background: rgba(168,255,0,0.3); border-color: var(--bp-green); transform: scale(1.02); }
+    100% { background: linear-gradient(135deg,#f8f9fa,#fff); border-color: var(--bp-green); transform: scale(1); }
+}
+#betslip-preview.highlight {
+    animation: highlightBetslip 1.5s ease;
+}
+.odd-btn:active {
+    transform: scale(0.92);
+    transition: transform 0.05s;
+}
 </style>
 
 <script>
-function goMatch(id) { window.location = '/match/' + id; }
-
-// Get server EAT time from backend
+// ===== GLOBALS =====
 const serverEATStr = '{{ now_eat.isoformat() if now_eat else "" }}';
 let serverEAT = serverEATStr ? new Date(serverEATStr) : new Date();
 let timeOffset = serverEAT - new Date();
-
-// Maps match_id → kickoff Date (as EAT)
 const matchKickoffs = {};
-
-document.querySelectorAll('[data-kickoff]').forEach(card => {
-  const mid = card.dataset.matchId;
-  const kickoffStr = card.getAttribute('data-kickoff');
-  if (kickoffStr) {
-    // Parse kickoff as EAT time (UTC+3)
-    matchKickoffs[mid] = new Date(kickoffStr.replace(' ', 'T') + '+03:00');
-  }
-});
-
-// Per-match inline timer spans
 const timerSpans = {};
-document.querySelectorAll('[id^="match-timer-"]').forEach(el => {
-  const mid = el.id.replace('match-timer-','');
-  timerSpans[mid] = el;
+
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for loaded bet message
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('loaded') === 'true') {
+        const preview = document.getElementById('betslip-preview');
+        if (preview) {
+            preview.classList.add('highlight');
+            setTimeout(() => preview.classList.remove('highlight'), 2000);
+        }
+    }
+    
+    // Initialize match data
+    document.querySelectorAll('[data-kickoff]').forEach(card => {
+        const mid = card.dataset.matchId;
+        const kickoffStr = card.getAttribute('data-kickoff');
+        if (kickoffStr) {
+            matchKickoffs[mid] = new Date(kickoffStr.replace(' ', 'T') + '+03:00');
+        }
+    });
+    
+    document.querySelectorAll('[id^="match-timer-"]').forEach(el => {
+        const mid = el.id.replace('match-timer-','');
+        timerSpans[mid] = el;
+    });
+    
+    // Start timers
+    tickAll();
+    setInterval(tickAll, 1000);
+    
+    // Start polling
+    pollMatches();
+    setInterval(pollMatches, 10000);
+    
+    // Calculate betslip potential
+    updateBetslipPotential();
+    
+    // Listen for stake changes
+    document.querySelector('input[name="stake"]')?.addEventListener('input', updateBetslipPotential);
 });
 
-function formatCountdown(diffSecs) {
-  if (diffSecs <= 0) return null;
-  const h = Math.floor(diffSecs / 3600);
-  const m = Math.floor((diffSecs % 3600) / 60);
-  const s = diffSecs % 60;
-  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
-  if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s`;
-  return `${s}s`;
+// ===== BETSLIP FUNCTIONS =====
+function addToBetslip(mid, label, market, mktLabel, sel, selLabel, odds) {
+    if (odds <= 0) return;
+    
+    fetch('/betslip/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            match_id: mid,
+            match_label: label,
+            market: market,
+            market_label: mktLabel,
+            selection: sel,
+            selection_label: selLabel,
+            odds: odds
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        // Update UI - show success and refresh betslip preview
+        const btn = event.target.closest('.odd-btn');
+        if (btn) {
+            btn.style.transition = 'background 0.2s';
+            btn.style.background = 'var(--bp-green)';
+            btn.style.color = '#111';
+            setTimeout(() => {
+                btn.style.background = '';
+                btn.style.color = '';
+            }, 400);
+        }
+        // Reload to update betslip preview
+        location.reload();
+    })
+    .catch(() => {});
 }
 
-// Matchday banners countdown
-document.querySelectorAll('.md-timer[data-time]').forEach(el => {
-  function tick() {
+function updateBetslipPotential() {
+    const stakeInput = document.querySelector('input[name="stake"]');
+    const potentialDisplay = document.getElementById('betslip-potential');
+    if (!stakeInput || !potentialDisplay) return;
+    
+    const selections = JSON.parse('{{ session.get("betslip", [])|tojson|safe }}');
+    let totalOdds = 1;
+    selections.forEach(s => { totalOdds *= parseFloat(s.odds) || 1; });
+    
+    const stake = parseFloat(stakeInput.value) || 0;
+    const potential = stake * totalOdds;
+    potentialDisplay.textContent = potential.toFixed(2) + ' TZS';
+}
+
+// ===== TIMER FUNCTIONS =====
+function formatCountdown(diffSecs) {
+    if (diffSecs <= 0) return null;
+    const h = Math.floor(diffSecs / 3600);
+    const m = Math.floor((diffSecs % 3600) / 60);
+    const s = diffSecs % 60;
+    if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+    if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s`;
+    return `${s}s`;
+}
+
+function tickAll() {
     const now = new Date();
     const nowEAT = new Date(now.getTime() + timeOffset);
-    const t = new Date(el.dataset.time.replace(' ', 'T') + '+03:00');
-    const diff = Math.max(0, Math.floor((t - nowEAT) / 1000));
-    const fmt = formatCountdown(diff);
-    el.textContent = fmt || 'Starting…';
-    if (diff > 0) setTimeout(tick, 1000);
-  }
-  tick();
-});
-
-// Unified 1-second ticker: syncs match timers with EAT
-function tickAll() {
-  const now = new Date();
-  const nowEAT = new Date(now.getTime() + timeOffset);
-  
-  Object.entries(timerSpans).forEach(([mid, el]) => {
-    const kickoff = matchKickoffs[mid];
-    if (!kickoff) { 
-      el.textContent = ''; 
-      return; 
-    }
     
-    const diffMs = kickoff - nowEAT;
-    const diffSecs = Math.floor(diffMs / 1000);
+    Object.entries(timerSpans).forEach(([mid, el]) => {
+        const kickoff = matchKickoffs[mid];
+        if (!kickoff) { 
+            el.textContent = ''; 
+            return; 
+        }
+        
+        const diffMs = kickoff - nowEAT;
+        const diffSecs = Math.floor(diffMs / 1000);
+        
+        if (diffSecs > 0) {
+            const fmt = formatCountdown(diffSecs);
+            el.textContent = fmt || '';
+            el.className = 'countdown-upcoming';
+            el.style.color = '#ff6d00';
+            el.style.animation = 'none';
+        } else if (diffSecs <= 0 && diffSecs > -10) {
+            el.textContent = '● STARTING';
+            el.className = 'countdown-live';
+            el.style.color = '#e53935';
+            el.style.animation = 'pulse 1.5s infinite';
+            setTimeout(() => {
+                if (!document.querySelector(`#match-card-${mid} .match-live`)) {
+                    location.reload();
+                }
+            }, 2000);
+        } else if (diffSecs <= -10) {
+            const card = document.querySelector(`#match-card-${mid}`);
+            if (card && !card.classList.contains('match-live') && diffSecs > -30) {
+                setTimeout(() => location.reload(), 5000);
+            }
+            el.textContent = '● LIVE';
+            el.className = 'countdown-live';
+            el.style.color = '#e53935';
+            el.style.animation = 'pulse 1.5s infinite';
+        }
+    });
     
-    if (diffSecs > 0) {
-      // Countdown - match not started yet
-      const fmt = formatCountdown(diffSecs);
-      el.textContent = fmt;
-      el.className = 'countdown-upcoming';
-      el.style.color = '#ff6d00';
-    } else if (diffSecs <= 0 && diffSecs > -10) {
-      // Just hit zero - match should start
-      el.textContent = '● STARTING';
-      el.className = 'countdown-live';
-      el.style.color = '#e53935';
-      // Force reload to catch live match
-      setTimeout(() => location.reload(), 2000);
-    } else if (diffSecs <= -10) {
-      // Match should be live
-      el.textContent = '● LIVE';
-      el.className = 'countdown-live';
-      el.style.color = '#e53935';
-      // Reload after a few seconds if still not showing live
-      if (diffSecs > -30) {
-        setTimeout(() => location.reload(), 5000);
-      }
-    }
-  });
+    // Matchday banner timers
+    document.querySelectorAll('.md-timer[data-time]').forEach(el => {
+        const t = new Date(el.dataset.time.replace(' ', 'T') + '+03:00');
+        const diff = Math.max(0, Math.floor((t - nowEAT) / 1000));
+        const fmt = formatCountdown(diff);
+        if (el.textContent !== fmt) {
+            el.textContent = fmt || 'Starting…';
+        }
+    });
 }
 
-setInterval(tickAll, 1000);
-tickAll();
-
-// ── Live score polling + auto-remove finished cards ───────────────────────
-const liveCards = {};
-document.querySelectorAll('.match-live[data-match-id]').forEach(card => {
-  liveCards[card.dataset.matchId] = true;
-});
-
-// Poll all visible matches
+// ===== MATCH POLLING =====
 async function pollMatches() {
-  const cards = document.querySelectorAll('.match-card[data-match-id]');
-  for (const card of cards) {
-    const mid = card.dataset.matchId;
-    try {
-      const res = await fetch(`/match/${mid}/poll`);
-      if (!res.ok) continue;
-      const d = await res.json();
+    const cards = document.querySelectorAll('.match-card[data-match-id]');
+    for (const card of cards) {
+        const mid = card.dataset.matchId;
+        try {
+            const res = await fetch(`/match/${mid}/poll`);
+            if (!res.ok) continue;
+            const d = await res.json();
 
-      if (d.status === 'deleted' || d.status === 'finished') {
-        // Animate removal after 10-minute server delay
-        card.style.transition = 'opacity .6s, max-height .6s';
-        card.style.opacity = '0';
-        card.style.maxHeight = '0';
-        card.style.overflow = 'hidden';
-        setTimeout(() => { card.remove(); checkBannersEmpty(); }, 700);
-        continue;
-      }
+            if (d.status === 'deleted' || d.status === 'finished') {
+                card.style.transition = 'opacity .6s, max-height .6s, padding .6s';
+                card.style.opacity = '0';
+                card.style.maxHeight = '0';
+                card.style.padding = '0';
+                card.style.overflow = 'hidden';
+                setTimeout(() => { 
+                    card.remove(); 
+                    checkBannersEmpty();
+                }, 700);
+                continue;
+            }
 
-      if (d.status === 'live') {
-        card.classList.add('match-live');
-        const minEl = document.getElementById(`min-${mid}`);
-        const scoreEl = document.getElementById(`score-${mid}`);
-        const timerEl = document.getElementById(`match-timer-${mid}`);
-        if (minEl) minEl.textContent = `● ${d.current_minute}'`;
-        if (scoreEl) scoreEl.textContent = `${d.home_score}-${d.away_score}`;
-        if (timerEl) {
-          timerEl.textContent = `● ${d.current_minute}'`;
-          timerEl.style.color = '#e53935';
-        }
-      }
-    } catch(e) {}
-  }
+            if (d.status === 'live') {
+                card.classList.add('match-live');
+                const minEl = document.getElementById(`min-${mid}`);
+                const scoreEl = document.getElementById(`score-${mid}`);
+                const timerEl = document.getElementById(`match-timer-${mid}`);
+                if (minEl) minEl.textContent = `● ${d.current_minute}'`;
+                if (scoreEl) scoreEl.textContent = `${d.home_score}-${d.away_score}`;
+                if (timerEl) {
+                    timerEl.textContent = `● ${d.current_minute}'`;
+                    timerEl.style.color = '#e53935';
+                }
+            }
+        } catch(e) {}
+    }
 }
 
 function checkBannersEmpty() {
-  document.querySelectorAll('.matchday-banner').forEach(banner => {
-    let hasCards = false;
-    let el = banner.nextElementSibling;
-    while (el && !el.classList.contains('matchday-banner')) {
-      if (el.classList.contains('match-card')) { hasCards = true; break; }
-      el = el.nextElementSibling;
-    }
-    if (!hasCards) {
-      banner.style.transition = 'opacity .5s';
-      banner.style.opacity = '0';
-      setTimeout(() => banner.remove(), 600);
-    }
-  });
+    document.querySelectorAll('.matchday-banner').forEach(banner => {
+        let hasCards = false;
+        let el = banner.nextElementSibling;
+        while (el && !el.classList.contains('matchday-banner')) {
+            if (el.classList.contains('match-card')) { hasCards = true; break; }
+            el = el.nextElementSibling;
+        }
+        if (!hasCards) {
+            banner.style.transition = 'opacity .5s, max-height .5s';
+            banner.style.opacity = '0';
+            banner.style.maxHeight = '0';
+            banner.style.padding = '0';
+            banner.style.margin = '0';
+            banner.style.overflow = 'hidden';
+            setTimeout(() => banner.remove(), 600);
+        }
+    });
 }
 
-// Poll every 10 seconds
-setInterval(pollMatches, 10000);
+function goMatch(id) { 
+    window.location = '/match/' + id; 
+}
 
-// Force reload every 30 seconds to catch new live matches
+// ===== FORCE RELOAD FOR LIVE MATCHES =====
 setInterval(() => {
-  // Check if any match should be live but isn't showing
-  const timers = document.querySelectorAll('[id^="match-timer-"]');
-  let needsReload = false;
-  timers.forEach(timer => {
-    if (timer.textContent === '● STARTING' || timer.textContent === '● LIVE') {
-      needsReload = true;
+    const timers = document.querySelectorAll('[id^="match-timer-"]');
+    let needsReload = false;
+    timers.forEach(timer => {
+        if (timer.textContent === '● STARTING' || timer.textContent === '● LIVE') {
+            const card = timer.closest('.match-card');
+            if (card && !card.classList.contains('match-live')) {
+                needsReload = true;
+            }
+        }
+    });
+    if (needsReload) {
+        location.reload();
     }
-  });
-  if (needsReload) {
-    location.reload();
-  }
 }, 30000);
 </script>
 {% endblock %}
