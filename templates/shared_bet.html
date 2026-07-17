@@ -67,9 +67,138 @@
   </div>
 </div>
 
-<div style="padding:16px;text-align:center">
-  <a href="/virtuals" style="display:inline-block;background:var(--bp-green);color:#111;padding:12px 32px;border-radius:8px;font-weight:800;text-decoration:none">
-    ⚽ Place Your Own Bet
-  </a>
+<!-- Load This Bet Button -->
+<div style="padding:8px 16px;margin:0 0 8px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="/bet/load/{{ bet['share_code'] }}" 
+       style="flex:1;display:inline-block;background:var(--bp-green);color:#111;padding:14px 20px;border-radius:8px;font-weight:800;text-decoration:none;text-align:center;min-width:140px">
+      📋 Load This Bet
+    </a>
+    <a href="/virtuals" 
+       style="flex:1;display:inline-block;background:#333;color:white;padding:14px 20px;border-radius:8px;font-weight:800;text-decoration:none;text-align:center;min-width:140px">
+      ⚽ Browse Games
+    </a>
+  </div>
+  <div style="font-size:.75rem;color:#888;text-align:center;margin-top:8px">
+    Click "Load This Bet" to add all selections to your betslip instantly
+  </div>
 </div>
+
+<!-- Quick Place Section (for logged in users) -->
+{% if g.user %}
+<div style="background:white;padding:16px;margin:0 0 8px;border-radius:8px">
+  <div style="font-weight:800;margin-bottom:12px;font-size:1rem">🚀 Quick Place This Bet</div>
+  <form id="quickPlaceForm" onsubmit="event.preventDefault();quickPlaceBet('{{ bet['share_code'] }}')">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:120px">
+        <label style="font-size:.8rem;color:#888;display:block;margin-bottom:2px">Stake (TZS)</label>
+        <input type="number" id="quickStake" name="stake" value="100" min="100" max="1000000" step="100"
+               style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:1rem">
+      </div>
+      <div style="flex:1;min-width:100px">
+        <label style="font-size:.8rem;color:#888;display:block;margin-bottom:2px">Potential Win</label>
+        <div id="quickPotential" style="font-weight:900;color:var(--bp-green);font-size:1.1rem;padding:8px 0">0 TZS</div>
+      </div>
+      <div style="flex:1;min-width:100px">
+        <button type="submit" 
+                style="width:100%;background:linear-gradient(135deg,#f5a623,#f7c948);color:#111;padding:12px;border:none;border-radius:8px;font-weight:800;font-size:1rem;cursor:pointer;margin-top:18px">
+          Place Bet
+        </button>
+      </div>
+    </div>
+  </form>
+  <div id="quickPlaceStatus" style="margin-top:10px;font-size:.9rem;text-align:center;display:none"></div>
+</div>
+
+<!-- Current betslip status -->
+<div style="padding:0 16px 16px;text-align:center">
+  <div style="font-size:.8rem;color:#888">
+    {% if session.get('betslip', [])|length > 0 %}
+    📊 You have <strong style="color:var(--bp-green)">{{ session.get('betslip', [])|length }}</strong> selection(s) in your betslip
+    <a href="/virtuals" style="color:var(--bp-green);text-decoration:underline">View betslip</a>
+    {% else %}
+    No selections in betslip yet
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+// Calculate potential win in real-time
+document.addEventListener('DOMContentLoaded', function() {
+    const stakeInput = document.getElementById('quickStake');
+    const potentialDisplay = document.getElementById('quickPotential');
+    const totalOdds = {{ total.v }};
+    
+    function updatePotential() {
+        const stake = parseFloat(stakeInput.value) || 0;
+        const potential = stake * totalOdds;
+        potentialDisplay.textContent = potential.toFixed(2) + ' TZS';
+    }
+    
+    if (stakeInput) {
+        stakeInput.addEventListener('input', updatePotential);
+        updatePotential();
+    }
+});
+
+// Quick Place Bet function
+function quickPlaceBet(code) {
+    const statusDiv = document.getElementById('quickPlaceStatus');
+    const stake = document.getElementById('quickStake').value;
+    
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '⏳ Processing your bet...';
+    statusDiv.style.color = '#888';
+    
+    fetch('/bet/load-and-place/' + code, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'stake=' + encodeURIComponent(stake)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = '✅ ' + data.message;
+            statusDiv.style.color = '#2d6a00';
+            setTimeout(() => {
+                window.location.href = '/my-bets';
+            }, 2000);
+        } else {
+            statusDiv.innerHTML = '❌ ' + data.error;
+            statusDiv.style.color = '#c62828';
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = '❌ Error placing bet. Please try again.';
+        statusDiv.style.color = '#c62828';
+        console.error('Error:', error);
+    });
+}
+
+// Also support loading via AJAX without page reload
+function loadBetViaAjax(code) {
+    fetch('/bet/load/' + code)
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        }
+    })
+    .catch(err => {
+        console.error('Error loading bet:', err);
+        window.location.href = '/bet/load/' + code;
+    });
+}
+</script>
+
+<style>
+/* Add some responsive styles */
+@media (max-width: 480px) {
+    #quickPlaceForm .flex-wrap {
+        flex-direction: column;
+    }
+}
+</style>
 {% endblock %}
