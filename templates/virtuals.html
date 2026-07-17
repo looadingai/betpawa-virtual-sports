@@ -25,9 +25,11 @@
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a href="/my-bets" style="color:var(--bp-green);text-decoration:none;font-weight:700;padding:6px 14px;border:1px solid var(--bp-green);border-radius:6px;font-size:.85rem;background:rgba(168,255,0,0.1)">📊 My Bets</a>
-      <form action="/betslip/clear" method="POST" style="display:inline" onsubmit="return confirm('Clear all selections?')">
-        <button type="submit" style="background:none;border:1px solid #e53935;color:#e53935;font-weight:700;cursor:pointer;padding:6px 14px;border-radius:6px;font-size:.85rem">✕ Clear</button>
-      </form>
+      <!-- FIXED: Clear button using AJAX -->
+      <button onclick="clearBetslip()" 
+              style="background:none;border:1px solid #e53935;color:#e53935;font-weight:700;cursor:pointer;padding:6px 14px;border-radius:6px;font-size:.85rem">
+        ✕ Clear
+      </button>
     </div>
   </div>
   
@@ -218,6 +220,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for stake changes
     document.querySelector('input[name="stake"]')?.addEventListener('input', updateBetslipPotential);
 });
+
+// ===== CLEAR BETSLIP FUNCTION (FINAL FIX) =====
+function clearBetslip() {
+    if (!confirm('Clear all selections from your betslip?')) {
+        return;
+    }
+    
+    // Show loading state
+    const clearBtn = event.target;
+    const originalText = clearBtn.textContent;
+    clearBtn.textContent = '⏳ Clearing...';
+    clearBtn.disabled = true;
+    clearBtn.style.opacity = '0.7';
+    
+    fetch('/betslip/clear', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Force a full page reload with cache-busting
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+        } else {
+            alert('Failed to clear betslip. Please try again.');
+            clearBtn.textContent = originalText;
+            clearBtn.disabled = false;
+            clearBtn.style.opacity = '1';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+        clearBtn.textContent = originalText;
+        clearBtn.disabled = false;
+        clearBtn.style.opacity = '1';
+    });
+}
 
 // ===== BETSLIP FUNCTIONS =====
 function addToBetslip(mid, label, market, mktLabel, sel, selLabel, odds) {
