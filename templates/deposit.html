@@ -1,60 +1,313 @@
 {% extends 'base.html' %}
 {% block title %}Deposit – betPawa{% endblock %}
 {% block fp_account %}active{% endblock %}
+
 {% block content %}
 <div style="background:var(--bp-dark);padding:12px 16px;display:flex;align-items:center;gap:10px">
   <a href="/account" style="color:white;text-decoration:none;font-size:1.1rem">‹</a>
   <span style="color:white;font-weight:800">Deposit Funds</span>
 </div>
 
+<!-- Current Balance -->
 <div style="background:rgba(168,255,0,.12);border-bottom:2px solid var(--bp-green);padding:12px 16px;font-size:.85rem;color:#2d6a00;font-weight:600">
   💰 Current Balance: <strong>{{ user['balance']|money }} TZS</strong>
 </div>
 
-<div class="form-card">
-
-
-  <!-- ========== DIVIDER ========== -->
-  <div style="margin: 16px 0; text-align: center; position: relative;">
-    <hr style="border: none; border-top: 1px solid #e0e0e0;">
-    <span style="background: white; padding: 0 10px; color: #888; font-size: .75rem;">OR Request Manual Deposit</span>
+<!-- ========== SYSTEM ERROR NOTICE ========== -->
+<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:14px 16px;margin:12px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05)">
+  <div style="display:flex;align-items:flex-start;gap:12px">
+    <span style="font-size:1.8rem">⚠️</span>
+    <div style="flex:1">
+      <div style="font-weight:800;color:#856404;font-size:.95rem">System Error with Automated Deposits</div>
+      <div style="color:#856404;font-size:.85rem;margin-top:4px">
+        We are currently experiencing technical difficulties with our automated deposit system. 
+        To deposit funds, please follow the manual deposit instructions below.
+      </div>
+    </div>
   </div>
+</div>
 
-  <!-- ========== EXISTING MANUAL DEPOSIT FORM ========== -->
-  <form method="POST">
-    <div class="form-group">
-      <label class="form-label">Payment Method</label>
-      <select name="method" class="form-control" style="font-family:'Nunito',sans-serif">
+<!-- ========== MANUAL DEPOSIT INSTRUCTIONS ========== -->
+<div style="background:white;margin:12px;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+  <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:16px 20px;color:white">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:2rem">📱</span>
+      <div>
+        <div style="font-weight:800;font-size:1.1rem">Manual Deposit Instructions</div>
+        <div style="color:#aaa;font-size:.8rem;margin-top:2px">Follow these steps to complete your deposit</div>
+      </div>
+    </div>
+  </div>
+  
+  <div style="padding:16px 20px 20px">
+    <!-- Step 1: Contact Support -->
+    <div style="display:flex;gap:14px;margin-bottom:18px;align-items:flex-start">
+      <div style="background:#e94560;color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;flex-shrink:0;margin-top:2px">1</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.95rem;color:#111">Get Airtel Payment Number</div>
+        <div style="color:#666;font-size:.85rem;margin-top:2px">
+          Contact our support team to get the current Airtel number for sending payments
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="/support" style="background:#e94560;color:white;padding:8px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:.85rem;display:inline-flex;align-items:center;gap:6px">
+            💬 Contact Support
+          </a>
+          <span style="background:#f0f0f0;color:#555;padding:8px 16px;border-radius:8px;font-size:.8rem;display:inline-flex;align-items:center;gap:6px">
+            📧 support@betpawa.com
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Step 2: Send Money -->
+    <div style="display:flex;gap:14px;margin-bottom:18px;align-items:flex-start">
+      <div style="background:#e94560;color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;flex-shrink:0;margin-top:2px">2</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.95rem;color:#111">Send Money via Mobile Money</div>
+        <div style="color:#666;font-size:.85rem;margin-top:2px">
+          Use the Airtel number provided by support and send the exact deposit amount
+        </div>
+        
+        <!-- USSD Codes -->
+        <div style="margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="background:#f8f9fa;border-radius:10px;padding:12px 8px;text-align:center;border:1px solid #e8e8e8">
+            <div style="font-size:1.8rem">📶</div>
+            <div style="font-weight:800;font-size:.8rem;color:#111;margin-top:2px">Tigo</div>
+            <div style="font-size:.65rem;color:#888">Dial</div>
+            <div style="font-weight:900;font-size:.95rem;color:#e94560;font-family:'Rajdhani',sans-serif">*150*01#</div>
+            <div style="font-size:.6rem;color:#999;margin-top:2px">Follow prompts</div>
+          </div>
+          <div style="background:#f8f9fa;border-radius:10px;padding:12px 8px;text-align:center;border:1px solid #e8e8e8">
+            <div style="font-size:1.8rem">📶</div>
+            <div style="font-weight:800;font-size:.8rem;color:#111;margin-top:2px">Vodafone</div>
+            <div style="font-size:.65rem;color:#888">Dial</div>
+            <div style="font-weight:900;font-size:.95rem;color:#e94560;font-family:'Rajdhani',sans-serif">*150*00#</div>
+            <div style="font-size:.6rem;color:#999;margin-top:2px">Follow prompts</div>
+          </div>
+          <div style="background:#f8f9fa;border-radius:10px;padding:12px 8px;text-align:center;border:1px solid #e8e8e8">
+            <div style="font-size:1.8rem">📶</div>
+            <div style="font-weight:800;font-size:.8rem;color:#111;margin-top:2px">Airtel</div>
+            <div style="font-size:.65rem;color:#888">Dial</div>
+            <div style="font-weight:900;font-size:.95rem;color:#e94560;font-family:'Rajdhani',sans-serif">*150*60#</div>
+            <div style="font-size:.6rem;color:#999;margin-top:2px">Follow prompts</div>
+          </div>
+        </div>
+        
+        <div style="margin-top:10px;background:#e8f5e9;padding:10px 14px;border-radius:8px;font-size:.8rem;color:#2d6a00;border:1px solid #a8ff00">
+          💡 <strong>Important:</strong> Send the exact amount you wish to deposit to the Airtel number provided by support. After sending, submit the deposit request below.
+        </div>
+      </div>
+    </div>
+    
+    <!-- Step 3: Submit Request -->
+    <div style="display:flex;gap:14px;align-items:flex-start">
+      <div style="background:#e94560;color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;flex-shrink:0;margin-top:2px">3</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.95rem;color:#111">Submit Deposit Request</div>
+        <div style="color:#666;font-size:.85rem;margin-top:2px">
+          Fill in the form below. Your funds will be credited automatically after confirmation.
+        </div>
+        <div style="margin-top:6px;background:#e3f2fd;padding:6px 12px;border-radius:6px;font-size:.75rem;color:#0d47a1;border:1px solid #90caf9">
+          ⏳ Funds reflect within 5-30 minutes after sending
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DEPOSIT FORM ========== -->
+<div style="background:white;margin:12px;border-radius:12px;padding:16px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+  <div style="font-weight:800;font-size:1rem;margin-bottom:14px;color:#111;display:flex;align-items:center;gap:8px">
+    📝 Submit Deposit Request
+  </div>
+  
+  <form method="POST" action="/deposit" id="depositForm">
+    <!-- Amount -->
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label" style="font-weight:600;font-size:.85rem;color:#333;display:block;margin-bottom:4px">Amount (TZS)</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input type="number" name="amount" id="depositAmount" required 
+               min="500" max="1000000" step="100"
+               placeholder="Enter amount" 
+               style="flex:1;min-width:120px;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:1rem;font-family:'Nunito',sans-serif">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button type="button" onclick="setAmount(1000)" style="background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Nunito',sans-serif">1K</button>
+          <button type="button" onclick="setAmount(2000)" style="background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Nunito',sans-serif">2K</button>
+          <button type="button" onclick="setAmount(5000)" style="background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Nunito',sans-serif">5K</button>
+          <button type="button" onclick="setAmount(10000)" style="background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Nunito',sans-serif">10K</button>
+          <button type="button" onclick="setAmount(20000)" style="background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Nunito',sans-serif">20K</button>
+          <button type="button" onclick="setAmount(50000)" style="background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Nunito',sans-serif">50K</button>
+        </div>
+      </div>
+      <div style="font-size:.75rem;color:#888;margin-top:4px">Minimum: 500 TZS | Maximum: 1,000,000 TZS</div>
+    </div>
+    
+    <!-- Phone Number -->
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label" style="font-weight:600;font-size:.85rem;color:#333;display:block;margin-bottom:4px">Your Phone Number</label>
+      <input type="tel" name="phone" id="depositPhone" 
+             value="{{ user['phone'] or '' }}"
+             placeholder="e.g., 0712345678" 
+             style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:1rem;font-family:'Nunito',sans-serif">
+      <div style="font-size:.75rem;color:#888;margin-top:4px">We'll use this to confirm your deposit</div>
+    </div>
+    
+    <!-- Payment Method -->
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label" style="font-weight:600;font-size:.85rem;color:#333;display:block;margin-bottom:4px">Payment Method</label>
+      <select name="method" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:1rem;background:white;font-family:'Nunito',sans-serif">
         <option value="mpesa">📱 M-Pesa</option>
         <option value="tigopesa">📱 Tigo Pesa</option>
         <option value="airtel">📱 Airtel Money</option>
         <option value="halopesa">📱 Halo Pesa</option>
+        <option value="bank">🏦 Bank Transfer</option>
       </select>
     </div>
-    <div class="form-group">
-      <label class="form-label">Phone Number</label>
-      <input type="tel" name="phone" class="form-control" value="{{ user['phone'] or '' }}" placeholder="e.g. 0712345678">
+    
+    <!-- Deposit Summary -->
+    <div style="background:#f8f9fa;border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid #e8e8e8">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="color:#666;font-size:.85rem">Amount to Send</span>
+        <span id="summaryAmount" style="font-weight:900;font-size:1.05rem;color:#111;font-family:'Rajdhani',sans-serif">0 TZS</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="color:#666;font-size:.85rem">Network Fee</span>
+        <span style="font-weight:600;font-size:.85rem;color:#888">~ 0 TZS</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;margin-top:4px">
+        <span style="color:#666;font-size:.85rem;font-weight:600">You'll Receive</span>
+        <span id="summaryReceive" style="font-weight:900;font-size:1.1rem;color:#2d6a00;font-family:'Rajdhani',sans-serif">0 TZS</span>
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Amount (TZS)</label>
-      <input type="number" name="amount" class="form-control" min="500" placeholder="Minimum 500 TZS" required>
+    
+    <!-- Submit Button -->
+    <button type="submit" id="submitDeposit" 
+            style="width:100%;background:linear-gradient(135deg,#a8ff00,#7cb800);color:#111;padding:14px;border:none;border-radius:8px;font-weight:900;font-size:1.05rem;cursor:pointer;transition:transform 0.1s;font-family:'Nunito',sans-serif">
+      📤 Submit Deposit Request
+    </button>
+    
+    <div style="font-size:.75rem;color:#888;text-align:center;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px">
+      <span>⏳</span> Funds will be credited within 5-30 minutes after confirmation
     </div>
-    <!-- Quick amounts -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      {% for amt in [1000,2000,5000,10000,20000,50000] %}
-      <button type="button" onclick="document.querySelector('[name=amount]').value={{ amt }}"
-              style="background:#f5f5f5;border:1px solid #e0e0e0;padding:6px 14px;border-radius:20px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:'Nunito',sans-serif">
-        {{ '{:,}'.format(amt) }}
-      </button>
-      {% endfor %}
-    </div>
-    <button type="submit" class="btn-primary">REQUEST DEPOSIT (Admin Approval)</button>
-    <p style="text-align:center;margin-top:12px;font-size:.78rem;color:#888">Manual deposits require admin approval and may take a few minutes</p>
   </form>
 </div>
 
+<!-- ========== SUPPORT SECTION ========== -->
+<div style="background:white;margin:12px 12px 20px;border-radius:12px;padding:16px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+  <div style="font-weight:800;font-size:.95rem;margin-bottom:10px;color:#111;display:flex;align-items:center;gap:8px">
+    💬 Need Help?
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="/support" style="background:#e94560;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:.85rem;display:inline-flex;align-items:center;gap:6px">
+      💬 Live Chat
+    </a>
+    <a href="mailto:support@betpawa.com" style="background:#333;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:.85rem;display:inline-flex;align-items:center;gap:6px">
+      📧 Email
+    </a>
+    <span style="background:#f0f0f0;color:#555;padding:10px 18px;border-radius:8px;font-size:.85rem;display:inline-flex;align-items:center;gap:6px">
+      📞 +254 700 000 000
+    </span>
+  </div>
+  <div style="font-size:.75rem;color:#888;margin-top:8px">
+    ⏰ Support available 24/7 — We're here to help!
+  </div>
+</div>
+
+<!-- ========== HIDDEN STK PUSH SECTION (KEPT FOR COMPATIBILITY) ========== -->
+<div style="display:none">
+  <div id="instantDepositArea"></div>
+  <div id="instantFormArea"></div>
+  <button id="showInstantBtn"></button>
+  <button id="cancelInstantBtn"></button>
+  <button id="confirmInstantBtn"></button>
+  <input id="instantPhone">
+  <input id="instantAmount">
+</div>
+
 <script>
-// ========== INSTANT STK PUSH DEPOSIT ==========
+// ========== SET AMOUNT FROM QUICK BUTTONS ==========
+function setAmount(amount) {
+    document.getElementById('depositAmount').value = amount;
+    updateSummary();
+}
+
+// ========== UPDATE SUMMARY IN REAL-TIME ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.getElementById('depositAmount');
+    if (amountInput) {
+        amountInput.addEventListener('input', updateSummary);
+    }
+    updateSummary();
+});
+
+function updateSummary() {
+    const amountInput = document.getElementById('depositAmount');
+    const summaryAmount = document.getElementById('summaryAmount');
+    const summaryReceive = document.getElementById('summaryReceive');
+    
+    let amount = parseFloat(amountInput.value) || 0;
+    let fee = 0;
+    
+    // Calculate fee (0.5% for mobile money, min 10 TZS)
+    if (amount > 0) {
+        fee = Math.max(10, amount * 0.005);
+        // Round to nearest 5
+        fee = Math.ceil(fee / 5) * 5;
+    }
+    
+    const receiveAmount = Math.max(0, amount - fee);
+    
+    summaryAmount.textContent = amount.toFixed(2) + ' TZS';
+    summaryReceive.textContent = receiveAmount.toFixed(2) + ' TZS';
+    
+    // Validate amount
+    const submitBtn = document.getElementById('submitDeposit');
+    if (amount < 500) {
+        submitBtn.style.opacity = '0.5';
+        submitBtn.title = 'Minimum deposit is 500 TZS';
+    } else if (amount > 1000000) {
+        submitBtn.style.opacity = '0.5';
+        submitBtn.title = 'Maximum deposit is 1,000,000 TZS';
+    } else {
+        submitBtn.style.opacity = '1';
+        submitBtn.title = '';
+    }
+}
+
+// ========== FORM VALIDATION BEFORE SUBMIT ==========
+document.getElementById('depositForm')?.addEventListener('submit', function(e) {
+    const amount = parseFloat(document.getElementById('depositAmount').value) || 0;
+    
+    if (amount < 500) {
+        e.preventDefault();
+        alert('❌ Minimum deposit is 500 TZS');
+        return false;
+    }
+    
+    if (amount > 1000000) {
+        e.preventDefault();
+        alert('❌ Maximum deposit is 1,000,000 TZS');
+        return false;
+    }
+    
+    // Show confirmation
+    if (!confirm(
+        '💰 Confirm Deposit Request\n\n' +
+        'Amount: ' + amount.toFixed(2) + ' TZS\n\n' +
+        '⚠️ Make sure you have:\n' +
+        '1. Contacted support for the Airtel number\n' +
+        '2. Sent the exact amount to that number\n\n' +
+        'Funds will be credited after confirmation.'
+    )) {
+        e.preventDefault();
+        return false;
+    }
+    
+    return true;
+});
+
+// ========== STK PUSH FUNCTIONS (KEPT FOR COMPATIBILITY) ==========
+// These are kept but hidden since we're using manual deposit
 const showInstantBtn = document.getElementById('showInstantBtn');
 const instantFormArea = document.getElementById('instantFormArea');
 const instantDepositArea = document.getElementById('instantDepositArea');
@@ -63,7 +316,6 @@ const confirmInstantBtn = document.getElementById('confirmInstantBtn');
 const instantPhone = document.getElementById('instantPhone');
 const instantAmount = document.getElementById('instantAmount');
 
-// Show the instant deposit form
 if (showInstantBtn) {
   showInstantBtn.onclick = () => {
     instantDepositArea.style.display = 'none';
@@ -71,94 +323,37 @@ if (showInstantBtn) {
   };
 }
 
-// Cancel instant deposit
 if (cancelInstantBtn) {
   cancelInstantBtn.onclick = () => {
     instantFormArea.style.display = 'none';
     instantDepositArea.style.display = 'block';
-    // Clear fields
     if (instantAmount) instantAmount.value = '';
   };
 }
-
-// Process instant deposit with STK Push
-if (confirmInstantBtn) {
-  confirmInstantBtn.onclick = async () => {
-    const amount = parseFloat(instantAmount?.value);
-    const phone = instantPhone?.value?.trim();
-    
-    // Validation
-    if (!amount || amount < 10) {
-      alert('❌ Please enter amount (minimum KES 10)');
-      instantAmount?.focus();
-      return;
-    }
-    
-    if (amount > 500000) {
-      alert('❌ Maximum deposit is KES 500,000');
-      return;
-    }
-    
-    if (!phone) {
-      alert('❌ Please enter your M-Pesa phone number');
-      instantPhone?.focus();
-      return;
-    }
-    
-    // Validate phone format
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (!cleanPhone.match(/^(254|07)[0-9]{8,9}$/)) {
-      alert('❌ Invalid phone number. Use format: 2547XXXXXXXX or 07XXXXXXXX');
-      return;
-    }
-    
-    // Disable button during processing
-    confirmInstantBtn.disabled = true;
-    confirmInstantBtn.textContent = '⏳ Processing...';
-    
-    try {
-      const response = await fetch('/api/deposit/stk', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          amount: amount, 
-          phone: cleanPhone,
-          email: '{{ user.email if user.email else "" }}'
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.redirect_url) {
-        // Redirect to PesaPal payment page
-        window.location.href = data.redirect_url;
-      } else {
-        alert('❌ Error: ' + (data.error || 'Payment initiation failed. Please try again.'));
-        confirmInstantBtn.disabled = false;
-        confirmInstantBtn.textContent = 'Continue to Payment →';
-      }
-    } catch (err) {
-      console.error('STK Error:', err);
-      alert('❌ Network error. Please check your connection and try again.');
-      confirmInstantBtn.disabled = false;
-      confirmInstantBtn.textContent = 'Continue to Payment →';
-    }
-  };
-}
-
-// Helper function to format phone number as user types
-if (instantPhone) {
-  instantPhone.addEventListener('input', function(e) {
-    let val = this.value.replace(/[^0-9]/g, '');
-    if (val.startsWith('0') && val.length > 1) {
-      val = '254' + val.substring(1);
-    }
-    // Don't auto-format aggressively, just clean
-    this.value = val;
-  });
-}
 </script>
+
+<style>
+/* Responsive grid for USSD codes */
+@media (max-width: 480px) {
+    [style*="grid-template-columns:repeat(3,1fr)"] {
+        grid-template-columns: repeat(2,1fr) !important;
+    }
+}
+
+@media (max-width: 360px) {
+    [style*="grid-template-columns:repeat(3,1fr)"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+#submitDeposit:active {
+    transform: scale(0.97);
+}
+
+/* Smooth transitions */
+#depositForm button[type="submit"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(168,255,0,0.3);
+}
+</style>
 {% endblock %}
